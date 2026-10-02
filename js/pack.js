@@ -11,7 +11,7 @@ const RARITIES = {
   "Rare Holo": { fr: "Rare Holo", weight: 55, tier: 2 },
   "Rare Holo LV.X": { fr: "Rare Holo LV.X", weight: 14, tier: 2 },
   "Rare Prime": { fr: "Rare Prime", weight: 18, tier: 2 },
-  "Rare Holo Star": { fr: "Rare Holo ★", weight: 6, tier: 2 },
+  "Rare Holo Star": { fr: "Gold Star ★", weight: 2, tier: 4 },
   LEGEND: { fr: "LÉGENDE", weight: 10, tier: 2 },
   "Rare ACE": { fr: "Rare ACE", weight: 12, tier: 2 },
   "ACE SPEC Rare": { fr: "Rare ACE SPEC", weight: 6, tier: 2 },
@@ -33,7 +33,7 @@ const RARITIES = {
   "Rare Prism Star": { fr: "Rare Prisme ◇", weight: 12, tier: 3 },
   "Radiant Rare": { fr: "Rare Radieuse", weight: 8, tier: 3 },
   "Amazing Rare": { fr: "Rare Extraordinaire", weight: 10, tier: 3 },
-  "Rare Shining": { fr: "Rare Brillante", weight: 4, tier: 3 },
+  "Rare Shining": { fr: "Rare Brillante", weight: 4, tier: 4 },
   "Rare Shiny": { fr: "Rare Shiny", weight: 8, tier: 3 },
   "Shiny Rare": { fr: "Shiny Rare", weight: 40, tier: 3 },
   "Trainer Gallery Rare Holo": { fr: "Galerie des Dresseurs", weight: 12, tier: 3 },
@@ -50,6 +50,20 @@ const RARITIES = {
 };
 
 const UNKNOWN = { fr: "Inconnue", weight: 10, tier: 1 };
+
+// Du plus commun au plus rare à sortir d'un booster. Sert à désigner la « meilleure carte » :
+// à palier visuel égal, une Rare Holo VMAX bat une Rare Holo EX, et la Gold Star bat tout.
+const RARITY_ORDER = [
+  ["Common"], ["Uncommon"], ["Promo", "Classic Collection"], ["Rare"], ["Rare Holo"],
+  ["Pikachu Rare"], ["Futuristic Rare"], ["Rare ACE", "ACE SPEC Rare"], ["Rare Holo LV.X"], ["Rare Prime"], ["LEGEND"],
+  ["Rare Holo EX", "Rare Holo ex"], ["Double Rare"], ["Rare Holo GX"], ["Rare Holo V", "Holo Rare V"], ["Rare BREAK"],
+  ["Rare Prism Star"], ["Radiant Rare"], ["Amazing Rare"], ["Rare Holo VSTAR", "Holo Rare VSTAR"],
+  ["Rare Holo VMAX", "Holo Rare VMAX"], ["Trainer Gallery Rare Holo"], ["Rare Ultra", "Ultra Rare"], ["Rare Shiny", "Shiny Rare"],
+  ["Illustration Rare"], ["Rare Shiny GX"], ["Rare Rainbow"], ["Rare Secret"], ["Special Illustration Rare"], ["Hyper Rare"],
+  ["Shiny Ultra Rare"], ["Black White Rare"], ["Mega Hyper Rare", "MEGA_ATTACK_RARE"], ["Rare Shining"], ["Rare Holo Star"],
+];
+const RANKS = new Map(RARITY_ORDER.flatMap((names, rank) => names.map((name) => [name, rank])));
+const GOLD_STAR_RANK = RARITY_ORDER.length; // au-dessus de tout
 
 // Raretés qui, dans les blocs modernes, ne sortent que dans l'emplacement « chasse ».
 const CHASE = new Set([
@@ -69,9 +83,27 @@ export function rarityInfo(rarity) {
   return RARITIES[rarity] ?? (rarity ? { ...UNKNOWN, fr: rarity } : UNKNOWN);
 }
 
+// Les Gold Star (★ dans le nom) ne sont pas toujours étiquetées « Rare Holo Star » dans les données
+// (Espeon ★, Umbreon ★ des séries POP, réimpressions…) : on les reconnaît aussi par leur nom.
+export const isGoldStar = (card) => card.rarity === "Rare Holo Star" || /★/.test(card.name ?? "");
+
 export function tierOf(card) {
+  if (isGoldStar(card)) return 4;
   return card.supertype === "Energy" && !card.rarity ? 0 : rarityInfo(card.rarity).tier;
 }
+
+/** Rang de rareté (plus grand = plus rare). Fonctionne sur une carte ou sur { name, rarity }. */
+export function rarityRank(card) {
+  if (isGoldStar(card)) return GOLD_STAR_RANK;
+  if (!card.rarity) return card.supertype === "Energy" ? -1 : RANKS.get("Rare") + 0.5;
+  return RANKS.get(card.rarity) ?? RANKS.get("Rare") + 0.5;
+}
+
+/** Libellé français de la rareté d'une carte. */
+export const rarityLabel = (card) => (isGoldStar(card) ? RARITIES["Rare Holo Star"].fr : rarityInfo(card.rarity).fr);
+
+/** Raretés connues avec leur palier, pour les tests de cohérence. */
+export const knownRarities = () => Object.entries(RARITIES).map(([name, { tier }]) => ({ name, tier }));
 
 export function releaseYear(set) {
   return Number.parseInt(String(set.releaseDate).slice(0, 4), 10) || 0;
@@ -113,7 +145,7 @@ const pickOne = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 function pickByRarity(pool, rng) {
   const groups = new Map();
   for (const card of pool) {
-    const key = card.rarity ?? "";
+    const key = isGoldStar(card) ? "Rare Holo Star" : card.rarity ?? "";
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(card);
   }
@@ -186,9 +218,9 @@ export function openPack(set, cards, rng = Math.random) {
 }
 
 function sortPulls(pulls) {
-  // Tri stable : on garde l'ordre de tirage à palier égal, la meilleure carte sort en dernier.
+  // Tri stable : on garde l'ordre de tirage à rareté égale, la meilleure carte sort en dernier.
   return pulls
-    .map((p, i) => ({ p, i, t: tierOf(p.card) }))
-    .sort((a, b) => a.t - b.t || a.i - b.i)
+    .map((p, i) => ({ p, i, r: rarityRank(p.card) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
     .map((x) => x.p);
 }

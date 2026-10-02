@@ -57,9 +57,12 @@ export function recordPack(set, pulls) {
   return fresh;
 }
 
-/** Retient la meilleure carte jamais sortie (palier le plus haut, puis la plus récente). */
-export function recordBest(candidate) {
-  if (!state.best || candidate.tier >= state.best.tier) {
+/**
+ * Retient la meilleure carte jamais sortie. `rankOf` donne le rang de rareté d'une carte
+ * ({ name, rarity }) ; à rang égal, on garde la première obtenue.
+ */
+export function recordBest(candidate, rankOf) {
+  if (!state.best || rankOf(candidate) > rankOf(state.best)) {
     state.best = candidate;
     save();
   }

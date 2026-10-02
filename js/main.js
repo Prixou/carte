@@ -1,5 +1,5 @@
 import { loadSets, loadCards, loadPackArt, packArtUrls, preloadImages } from "./data.js";
-import { openPack, packFormat, isSpecialSet, rarityInfo, tierOf, releaseYear } from "./pack.js";
+import { openPack, packFormat, isSpecialSet, rarityLabel, rarityRank, tierOf, releaseYear } from "./pack.js";
 import * as store from "./store.js";
 
 const app = document.querySelector("#app");
@@ -83,7 +83,7 @@ function cardEl(card, { reverse = false, flippable = false, large = false, isNew
       <div class="face back"></div>
       <div class="face front">
         ${src ? `<img src="${esc(src)}" alt="${esc(card.name)}" ${large ? "" : 'loading="lazy"'} draggable="false" />` : ""}
-        <span class="fallback">${esc(card.name)}<br>${esc(rarityInfo(card.rarity).fr)}</span>
+        <span class="fallback">${esc(card.name)}<br>${esc(rarityLabel(card))}</span>
         <div class="holo"></div>
         ${isNew ? `<span class="new-badge">NOUVELLE</span>` : ""}
         ${count > 1 ? `<span class="count-badge">×${count}</span>` : ""}
@@ -122,7 +122,6 @@ function closeZoom() {
 
 function openZoom(card, set, { reverse = false } = {}) {
   closeZoom();
-  const info = rarityInfo(card.rarity);
   zoomEl = document.createElement("div");
   zoomEl.className = "modal";
   zoomEl.setAttribute("role", "dialog");
@@ -131,7 +130,7 @@ function openZoom(card, set, { reverse = false } = {}) {
     <div><div class="modal-body"></div>
     <div class="modal-info"><b>${esc(card.name)}</b>
       <div>${esc(set?.name ?? "")} · n°${esc(card.number)}${set?.printedTotal ? `/${set.printedTotal}` : ""}</div>
-      <div>${esc(info.fr)}${reverse ? " · Reverse" : ""} · possédée ×${store.countOf(card.id)}</div></div></div>`;
+      <div>${esc(rarityLabel(card))}${reverse ? " · Reverse" : ""} · possédée ×${store.countOf(card.id)}</div></div></div>`;
   const holder = zoomEl.querySelector(".modal-body");
   const el = cardEl(card, { reverse, large: true });
   holder.append(el);
@@ -295,7 +294,7 @@ async function openView(setId, token, signal) {
     const pulls = openPack(set, cards);
     const fresh = store.recordPack(set, pulls);
     const best = pulls[pulls.length - 1].card;
-    store.recordBest({ id: best.id, name: best.name, image: best.images?.small, rarity: best.rarity, tier: tierOf(best), set: set.name });
+    store.recordBest({ id: best.id, name: best.name, image: best.images?.small, rarity: best.rarity, set: set.name }, rarityRank);
     refreshNav();
 
     await Promise.all([wait(750), preloadImages(pulls.map((p) => p.card.images?.large ?? p.card.images?.small).filter(Boolean), 10000)]);
@@ -343,8 +342,7 @@ async function openView(setId, token, signal) {
       const el = stack.querySelector(".card3d");
       el.classList.add("flipped");
       flipped = true;
-      const info = rarityInfo(card.rarity);
-      label.innerHTML = `<div data-tier="${tierOf(card)}"><b>${esc(card.name)}</b><span>${esc(info.fr)}${reverse ? " · Reverse" : ""}${fresh.has(card.id) ? " · nouvelle !" : ""}</span></div>`;
+      label.innerHTML = `<div data-tier="${tierOf(card)}"><b>${esc(card.name)}</b><span>${esc(rarityLabel(card))}${reverse ? " · Reverse" : ""}${fresh.has(card.id) ? " · nouvelle !" : ""}</span></div>`;
       stack.setAttribute("aria-label", i + 1 < pulls.length ? "Carte suivante" : "Terminer");
       if (tierOf(card) >= 3) {
         stage.classList.remove("flash");
@@ -381,7 +379,7 @@ async function openView(setId, token, signal) {
     const bestPull = pulls[pulls.length - 1];
     stage.innerHTML = `<div class="summary">
         <div class="summary-head"><h2>Ton ${special ? "tirage" : "booster"}</h2>
-          <span class="counter">${plural(fresh.size, "nouvelle carte", "nouvelles cartes")} sur ${pulls.length} · meilleure carte : ${esc(bestPull.card.name)} (${esc(rarityInfo(bestPull.card.rarity).fr)})</span></div>
+          <span class="counter">${plural(fresh.size, "nouvelle carte", "nouvelles cartes")} sur ${pulls.length} · meilleure carte : ${esc(bestPull.card.name)} (${esc(rarityLabel(bestPull.card))})</span></div>
         <div class="cards-grid" id="results"></div>
         <div class="actions"><button class="btn primary" id="again">Ouvrir ${special ? "une autre pochette" : "un autre booster"}</button>
           <a class="btn" href="#/collection/${encodeURIComponent(set.id)}">Voir ma collection de cette extension</a>
@@ -432,10 +430,11 @@ function collectionHome(sets, signal) {
       <div class="stat"><b>${stats.total}</b><span>cartes au total</span></div>
       <div class="stat"><b>${owned.length}</b><span>extensions entamées</span></div>
     </div>
-    ${stats.best ? `<h2>Ta meilleure carte</h2><div class="cards-grid" style="grid-template-columns:150px"><div class="mini">
-      <div class="card3d noflip" data-tier="${stats.best.tier}" data-reverse="0"><div class="flip"><div class="face front">
+    ${stats.best ? `<h2>Ta meilleure carte</h2><div class="cards-grid" style="grid-template-columns:170px"><div class="mini best">
+      <div class="card3d noflip" data-tier="${tierOf(stats.best)}" data-reverse="0"><div class="flip"><div class="face front">
         ${stats.best.image ? `<img src="${esc(stats.best.image)}" alt="${esc(stats.best.name)}" />` : ""}<span class="fallback">${esc(stats.best.name)}</span><div class="holo"></div></div></div></div>
-      <span class="lbl">${esc(stats.best.name)} · ${esc(stats.best.set)}</span></div></div>` : ""}
+      <span class="lbl"><b>${esc(stats.best.name)}</b></span>
+      <span class="lbl">${esc(rarityLabel(stats.best))} · ${esc(stats.best.set)}</span></div></div>` : ""}
     <h2>Extensions</h2>
     <div class="grid">${owned.map((s) => setTile(s, `#/collection/${encodeURIComponent(s.id)}`)).join("")}</div>
     <div class="actions"><button class="btn danger" id="reset">Effacer ma collection</button></div>`;

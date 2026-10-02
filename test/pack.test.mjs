@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { openPack, packFormat, isSpecialSet, tierOf, rarityInfo } from "../js/pack.js";
+import { openPack, packFormat, isSpecialSet, tierOf, rarityInfo, rarityRank, rarityLabel, isGoldStar, knownRarities } from "../js/pack.js";
+import * as store from "../js/store.js";
 
 // Générateur pseudo-aléatoire déterministe pour des tests reproductibles.
 function seeded(seed) {
@@ -112,4 +113,65 @@ test("une pochette spéciale tire jusqu'à 5 cartes distinctes", () => {
 test("les raretés inconnues ont un libellé de repli", () => {
   assert.equal(rarityInfo("Rareté Future").fr, "Rareté Future");
   assert.equal(rarityInfo(undefined).fr, "Inconnue");
+});
+
+test("la Gold Star est la carte la plus rare, y compris quand le nom seul la trahit", () => {
+  const gold = { name: "Pikachu ★", rarity: "Rare Holo Star" };
+  const oldGold = { name: "Espeon ★", rarity: "Rare" }; // étiquetée « Rare » dans les séries POP
+  for (const rarity of knownRarities().map((r) => r.name)) {
+    if (rarity === "Rare Holo Star") continue;
+    assert.ok(rarityRank(gold) > rarityRank({ name: "x", rarity }), `Gold Star <= ${rarity}`);
+  }
+  assert.equal(isGoldStar(oldGold), true);
+  assert.equal(rarityRank(oldGold), rarityRank(gold));
+  assert.equal(rarityLabel(oldGold), "Gold Star ★");
+  assert.equal(isGoldStar({ name: "Star Piece", rarity: "Uncommon" }), false);
+  assert.equal(tierOf(gold), 4);
+});
+
+test("le rang de rareté ne contredit jamais le palier visuel", () => {
+  const list = knownRarities().map((r) => ({ ...r, rank: rarityRank({ name: "x", rarity: r.name }) }));
+  for (const a of list) for (const b of list) if (a.rank > b.rank) assert.ok(a.tier >= b.tier, `${a.name} (rang ${a.rank}) a un palier < ${b.name}`);
+});
+
+test("à palier égal, la carte la plus rare est tirée en dernier", () => {
+  const set = makeSet("v", 2020, 100);
+  const cards = makeCards("v", [["Common", 40], ["Uncommon", 30], ["Rare Holo EX", 6], ["Rare Holo VMAX", 6]]);
+  const rng = seeded(21);
+  for (let i = 0; i < 300; i++) {
+    const ranks = openPack(set, cards, rng).map((p) => rarityRank(p.card));
+    assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
+  }
+});
+
+test("une Gold Star sort en dernier et reste rare (environ 1 booster sur 50)", () => {
+  const set = makeSet("g", 2005, 100);
+  const cards = makeCards("g", [["Common", 40], ["Uncommon", 30], ["Rare", 14], ["Rare Holo", 14], ["Rare Holo EX", 8], ["Rare Holo Star", 2, { name: "Gold ★" }]]);
+  const rng = seeded(33);
+  const runs = 6000;
+  let stars = 0;
+  for (let i = 0; i < runs; i++) {
+    const pack = openPack(set, cards, rng);
+    if (pack.some((p) => p.card.rarity === "Rare Holo Star")) {
+      stars++;
+      assert.equal(pack.at(-1).card.rarity, "Rare Holo Star");
+    }
+  }
+  const rate = stars / runs;
+  assert.ok(rate > 0.005 && rate < 0.04, `taux de Gold Star inattendu : ${rate}`);
+});
+
+test("la meilleure carte retenue suit le rang de rareté, pas l'ordre d'arrivée", () => {
+  store.reset();
+  const card = (name, rarity) => ({ id: name, name, rarity, set: "t" });
+  store.recordBest(card("Gold", "Rare Holo Star"), rarityRank);
+  store.recordBest(card("Dracaufeu EX", "Rare Holo EX"), rarityRank); // plus récente mais moins rare
+  assert.equal(store.getStats().best.name, "Gold");
+  store.recordBest(card("Espeon ★", "Rare"), rarityRank); // même rang : on garde la première
+  assert.equal(store.getStats().best.name, "Gold");
+  store.reset();
+  store.recordBest(card("EX", "Rare Holo EX"), rarityRank);
+  store.recordBest(card("Mew ex", "Hyper Rare"), rarityRank);
+  assert.equal(store.getStats().best.name, "Mew ex");
+  store.reset();
 });

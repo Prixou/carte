@@ -238,6 +238,8 @@ img.broken { visibility: hidden; }
 .mini .card3d { transition: transform .15s; }
 .mini:hover .card3d { transform: translateY(-4px); }
 .mini .lbl { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini .lbl b { color: var(--text); }
+.mini.best .lbl { white-space: normal; }
 .mini.missing .face.front img { filter: grayscale(1) brightness(.35); }
 .mini.missing .holo { display: none; }
 .mini.missing .flip { box-shadow: none !important; animation: none !important; }
