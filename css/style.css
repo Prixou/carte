@@ -137,6 +137,12 @@ img.broken { visibility: hidden; }
 .pack .p-logo { width: 78%; max-height: 90px; object-fit: contain; filter: drop-shadow(0 3px 6px #000a); }
 .pack .p-name { font-weight: 800; text-align: center; padding: 0 14px; text-shadow: 0 2px 6px #000a; line-height: 1.15; }
 .pack .p-sub { font-size: 12px; opacity: .85; text-transform: uppercase; letter-spacing: 2px; }
+.pack.art {
+  width: auto; aspect-ratio: auto; display: block; background: none; box-shadow: none; clip-path: none;
+  filter: drop-shadow(0 18px 26px #000b); animation: bob 3s ease-in-out infinite;
+}
+.pack.art:hover:not(:disabled) { filter: drop-shadow(0 18px 26px #000b) brightness(1.08); }
+.pack .p-art { display: block; height: min(58vh, 520px); width: auto; max-width: min(88vw, 360px); aspect-ratio: auto 5 / 9; object-fit: contain; }
 .pack.tearing { animation: tear .75s ease-in forwards; }
 @keyframes sheen { 0%, 100% { background-position: 120% 0, 0 0; } 50% { background-position: -20% 0, 0 0; } }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-8px) rotate(1deg); } }

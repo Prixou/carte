@@ -37,7 +37,7 @@ jobs:
       - name: Assembler le site (fichiers statiques uniquement)
         run: |
           mkdir _site
-          cp -r index.html css js _site/
+          cp -r index.html css js data _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

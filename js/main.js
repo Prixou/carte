@@ -1,4 +1,4 @@
-import { loadSets, loadCards, preloadImages } from "./data.js";
+import { loadSets, loadCards, loadPackArt, packArtUrls, preloadImages } from "./data.js";
 import { openPack, packFormat, isSpecialSet, rarityInfo, tierOf, releaseYear } from "./pack.js";
 import * as store from "./store.js";
 
@@ -230,7 +230,7 @@ async function homeView(_, token, signal) {
 /* --------------------------------------------------------------- ouverture */
 
 async function openView(setId, token, signal) {
-  const sets = await loadSets();
+  const [sets, packArt] = await Promise.all([loadSets(), loadPackArt()]);
   if (token !== renderToken) return;
   const set = sets.find((s) => s.id === setId);
   if (!set) {
@@ -247,14 +247,36 @@ async function openView(setId, token, signal) {
     <div class="stage" id="stage"></div>`;
   const stage = app.querySelector("#stage");
 
-  const showPack = () => {
-    stage.innerHTML = `<button class="pack" id="pack" style="--hue:${hueOf(set.id)}" aria-label="Ouvrir ${special ? "la pochette" : "le booster"}" disabled>
-        ${set.images?.logo ? `<img class="p-logo" src="${esc(set.images.logo)}" alt="" />` : ""}
+  // Visuels officiels : comme dans les vrais boosters, plusieurs designs existent, un seul est affiché.
+  let arts = packArtUrls(packArt, set.id);
+  let artIndex = Math.floor(Math.random() * arts.length);
+
+  // Booster dessiné par l'application, utilisé quand aucun visuel officiel n'existe ou ne se charge.
+  const drawnPack = () => `${set.images?.logo ? `<img class="p-logo" src="${esc(set.images.logo)}" alt="" />` : ""}
         <span class="p-name">${esc(set.name)}</span>
-        <span class="p-sub">${special ? "Pochette" : "Booster"}</span>
+        <span class="p-sub">${special ? "Pochette" : "Booster"}</span>`;
+
+  const showPack = () => {
+    const art = arts[artIndex];
+    stage.innerHTML = `<button class="pack ${art ? "art" : ""}" id="pack" style="--hue:${hueOf(set.id)}" aria-label="Ouvrir ${special ? "la pochette" : "le booster"}" disabled>
+        ${art ? `<img class="p-art" src="${esc(art)}" alt="Booster ${esc(set.name)}" draggable="false" />` : drawnPack()}
       </button>
-      <p class="hint" id="hint">Chargement des cartes…</p>`;
-    return stage.querySelector("#pack");
+      <p class="hint" id="hint">Chargement des cartes…</p>
+      ${arts.length > 1 ? `<button class="btn" id="other-art">Autre visuel</button>` : ""}`;
+    const btn = stage.querySelector("#pack");
+    stage.querySelector(".p-art")?.addEventListener("error", () => {
+      // Image indisponible : on retombe sur le booster dessiné pour ne jamais bloquer l'ouverture.
+      arts = [];
+      btn.classList.remove("art");
+      btn.innerHTML = drawnPack();
+      stage.querySelector("#other-art")?.remove();
+    }, { signal });
+    stage.querySelector("#other-art")?.addEventListener("click", () => {
+      if (btn.disabled && btn.classList.contains("tearing")) return;
+      artIndex = (artIndex + 1) % arts.length;
+      btn.querySelector(".p-art").src = arts[artIndex];
+    }, { signal });
+    return btn;
   };
 
   const packBtn = showPack();
@@ -378,6 +400,7 @@ async function openView(setId, token, signal) {
       grid.append(btn);
     }
     stage.querySelector("#again").addEventListener("click", () => {
+      if (arts.length) artIndex = Math.floor(Math.random() * arts.length);
       const btn = showPack();
       btn.disabled = false;
       stage.querySelector("#hint").textContent = `Clique sur ${special ? "la pochette" : "le booster"} pour l'ouvrir`;

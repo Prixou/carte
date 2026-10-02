@@ -31,6 +31,12 @@ Les taux sont des approximations, pas les taux officiels.
 
 Un booster ne contient jamais deux fois la même carte. La logique est dans `js/pack.js` (pure, testée dans `test/`).
 
+## Visuels des boosters
+
+Les visuels officiels des boosters viennent du dépôt communautaire [1niceroli/ptcg-assets](https://github.com/1niceroli/ptcg-assets) : 596 visuels pour 155 extensions, avec plusieurs designs par extension quand le jeu en propose (un est tiré au hasard, et « Autre visuel » permet de changer). Ils ne sont pas copiés ici : l'application les charge depuis ce dépôt, figé sur un commit précis (`data/packs.json`). Les 21 extensions sans vrai booster (promos, McDonald's, kits dresseur…) gardent un booster dessiné par l'application, tout comme n'importe quelle image qui ne se charge pas.
+
+Pour mettre le catalogue à jour : `node scripts/update-packs.mjs` (nécessite git et un accès à GitHub).
+
 ## Données
 
 Les extensions et les cartes viennent du dépôt communautaire [PokemonTCG/pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data) (JSON statiques servis par `raw.githubusercontent.com`) ; les images sont celles référencées dans ces données. Les noms de cartes sont donc en anglais. Les nouvelles extensions apparaissent automatiquement quand ce dépôt est mis à jour.

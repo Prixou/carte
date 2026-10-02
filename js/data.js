@@ -30,6 +30,26 @@ export function loadCards(setId) {
   return cached(`cards:${setId}`, () => getJson(`${BASE}/cards/en/${setId}.json`));
 }
 
+/**
+ * Visuels officiels de boosters : data/packs.json (généré par scripts/update-packs.mjs) liste,
+ * par extension, les fichiers du dépôt 1niceroli/ptcg-assets, figé sur un commit précis.
+ * Facultatif : sans ce fichier, l'application dessine elle-même le booster.
+ */
+export function loadPackArt() {
+  return cached("packart", async () => {
+    try {
+      return await getJson(new URL("../data/packs.json", import.meta.url));
+    } catch {
+      return { repo: "", sha: "", packs: {} };
+    }
+  });
+}
+
+export const packArtUrls = (art, setId) =>
+  (art.packs[setId] ?? []).map(
+    (file) => `https://raw.githubusercontent.com/${art.repo}/${art.sha}/${setId}/packshots/${encodeURIComponent(file)}`,
+  );
+
 /** Précharge des images ; ne rejette jamais (une image absente ne doit pas bloquer l'ouverture). */
 export function preloadImages(urls, timeoutMs = 8000) {
   const load = (url) =>
