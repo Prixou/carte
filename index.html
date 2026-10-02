@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f1222" />
+    <title>Carte — Ouverture de boosters Pokémon</title>
+    <meta name="description" content="Ouvre des boosters de toutes les extensions Pokémon TCG et construis ta collection." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%23fff' stroke='%23111' stroke-width='6'/%3E%3Cpath d='M4 50a46 46 0 0 1 92 0z' fill='%23e63946'/%3E%3Cpath d='M4 50h92' stroke='%23111' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%23fff' stroke='%23111' stroke-width='6'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#/"><span class="ball" aria-hidden="true"></span>Carte</a>
+      <nav>
+        <a href="#/" data-nav="home">Boosters</a>
+        <a href="#/collection" data-nav="collection">Collection <span id="nav-count" class="pill"></span></a>
+      </nav>
+    </header>
+    <main id="app" aria-live="polite"></main>
+    <footer class="footer">
+      Projet de fan non officiel. Pokémon et les noms de cartes sont des marques de Nintendo, Creatures Inc. et GAME FREAK inc.
+      Données : <a href="https://github.com/PokemonTCG/pokemon-tcg-data" target="_blank" rel="noopener">pokemon-tcg-data</a>.
+    </footer>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
